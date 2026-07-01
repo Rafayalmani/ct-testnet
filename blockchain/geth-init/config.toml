@@ -1,0 +1,42 @@
+[Eth]
+NetworkId = 7777
+SyncMode = "full"
+GasPrice = 1000000000
+
+[Eth.Miner]
+GasFloor = 8000000
+GasCeil = 30000000
+GasPrice = 1000000000
+RecommitInterval = 3000000000
+
+[Node]
+DataDir = "/root/.ethereum"
+KeyStoreDir = "/root/.ethereum/keystore"
+UseLightweightKDF = false
+P2P.ListenAddr = ":30303"
+P2P.NoDiscovery = false
+P2P.BootstrapNodes = []
+HTTP.Addr = "0.0.0.0"
+HTTP.Port = 8545
+HTTP.API = ["eth", "net", "web3", "personal", "txpool", "debug"]
+WS.Addr = "0.0.0.0"
+WS.Port = 8546
+WS.API = ["eth", "net", "web3"]
+AuthAddr = "localhost"
+AuthPort = 8551
+AuthVirtualHosts = ["localhost"]
+GraphQL.Enabled = true
+GraphQL.Addr = "0.0.0.0"
+GraphQL.Port = 8547
+GraphQL.VirtualHosts = ["localhost"]
+
+[Node.HTTPTimeouts]
+ReadTimeout = 30000000000
+WriteTimeout = 30000000000
+IdleTimeout = 120000000000
+
+[Node.LogConfig]
+FilePath = ""
+MaxBackups = 3
+MaxSize = 100
+MaxAge = 0

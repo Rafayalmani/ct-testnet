@@ -1,0 +1,27 @@
+{
+  "name": "ct-testnet-blockchain",
+  "version": "1.0.0",
+  "description": "CT Chain Testnet - Geth-based EVM blockchain",
+  "main": "index.js",
+  "scripts": {
+    "start": "geth --config=geth-init/config.toml --datadir=./data",
+    "init": "geth init --datadir=./data geth-init/genesis.json",
+    "clean": "rm -rf data validator*",
+    "console": "geth attach ipc:./data/geth.ipc",
+    "account:create": "geth account new --datadir=./data",
+    "account:list": "geth account list --datadir=./data",
+    "validator:1": "geth --datadir=./validator1 --config=geth-init/validator1.toml",
+    "validator:2": "geth --datadir=./validator2 --config=geth-init/validator2.toml",
+    "validator:3": "geth --datadir=./validator3 --config=geth-init/validator3.toml",
+    "export:chain": "geth export --datadir=./data chain.rlp",
+    "import:chain": "geth import --datadir=./data chain.rlp"
+  },
+  "keywords": [
+    "ethereum",
+    "geth",
+    "blockchain",
+    "testnet"
+  ],
+  "author": "CT Chain",
+  "license": "MIT"
+}

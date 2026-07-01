@@ -1,0 +1,21 @@
+[Eth]
+NetworkId = 7777
+SyncMode = "full"
+GasPrice = 1000000000
+
+[Eth.Miner]
+GasFloor = 8000000
+GasCeil = 30000000
+GasPrice = 1000000000
+RecommitInterval = 3000000000
+
+[Node]
+DataDir = "/root/validator1"
+P2P.ListenAddr = ":30304"
+P2P.BootstrapNodes = ["enode://node1@127.0.0.1:30303"]
+HTTP.Addr = "0.0.0.0"
+HTTP.Port = 8645
+HTTP.API = ["eth", "net", "web3", "personal", "txpool", "debug"]
+WS.Addr = "0.0.0.0"
+WS.Port = 8646
+WS.API = ["eth", "net", "web3"]
