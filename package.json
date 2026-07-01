@@ -1,0 +1,45 @@
+{
+  "name": "ct-testnet",
+  "version": "1.0.0",
+  "description": "CT Chain Testnet - Production-quality EVM-compatible blockchain",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "blockchain"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm:blockchain:start\" \"npm:api:start\" \"npm:explorer:start\" \"npm:faucet:start\" \"npm:dashboard:start\"",
+    "blockchain:start": "cd blockchain && npm run start",
+    "api:start": "cd packages/api && npm run dev",
+    "explorer:start": "cd packages/explorer && npm run dev",
+    "faucet:start": "cd packages/faucet && npm run dev",
+    "dashboard:start": "cd packages/dashboard && npm run dev",
+    "test": "npm run test:blockchain && npm run test:api && npm run test:contracts",
+    "test:blockchain": "cd blockchain && npm test",
+    "test:api": "cd packages/api && npm test",
+    "test:contracts": "cd packages/contracts && npm test",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "rm -rf node_modules blockchain/node_modules packages/*/node_modules && rm -rf blockchain/data blockchain/validator*",
+    "docker:build": "docker-compose build",
+    "docker:start": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v"
+  },
+  "dependencies": {
+    "ethers": "^6.7.1",
+    "web3": "^4.0.2",
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.1.6",
+    "concurrently": "^8.0.1",
+    "eslint": "^8.44.0",
+    "prettier": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0"
+  }
+}

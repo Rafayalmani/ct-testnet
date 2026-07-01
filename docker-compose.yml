@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ct-postgres
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-ctchain}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-ctchain123}
+      POSTGRES_DB: ${DATABASE_NAME:-ctchain}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./blockchain/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ct-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-ctchain}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: ct-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - ct-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Blockchain Node (Geth)
+  blockchain:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    container_name: ct-blockchain
+    environment:
+      CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-7777}
+      NETWORK_ID: ${BLOCKCHAIN_NETWORK_ID:-7777}
+      RPC_PORT: ${BLOCKCHAIN_RPC_PORT:-8545}
+      WS_PORT: ${BLOCKCHAIN_WS_PORT:-8546}
+    ports:
+      - '8545:8545'
+      - '8546:8546'
+      - '30303:30303'
+    volumes:
+      - ./blockchain/data:/root/.ethereum
+      - ./blockchain/geth-init:/config
+    networks:
+      - ct-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8545']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+
+  # API Server
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    container_name: ct-api
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      API_PORT: ${API_PORT:-8080}
+      DATABASE_URL: postgresql://${DATABASE_USER:-ctchain}:${DATABASE_PASSWORD:-ctchain123}@postgres:5432/${DATABASE_NAME:-ctchain}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      BLOCKCHAIN_RPC: http://blockchain:8545
+      BLOCKCHAIN_WS: ws://blockchain:8546
+      JWT_SECRET: ${JWT_SECRET:-your_secret_key}
+    ports:
+      - '8080:8080'
+    networks:
+      - ct-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      blockchain:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/v1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Block Explorer
+  explorer:
+    build:
+      context: ./packages/explorer
+      dockerfile: Dockerfile
+    container_name: ct-explorer
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      NEXT_PUBLIC_RPC_URL: http://localhost:8545
+      NEXT_PUBLIC_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-7777}
+      NEXT_PUBLIC_CHAIN_NAME: 'CT Chain Testnet'
+      DATABASE_URL: postgresql://${DATABASE_USER:-ctchain}:${DATABASE_PASSWORD:-ctchain123}@postgres:5432/${DATABASE_NAME:-ctchain}
+    ports:
+      - '3001:3000'
+    networks:
+      - ct-network
+    depends_on:
+      - api
+      - postgres
+
+  # Faucet
+  faucet:
+    build:
+      context: ./packages/faucet
+      dockerfile: Dockerfile
+    container_name: ct-faucet
+    environment:
+      REACT_APP_API_URL: http://localhost:8080/api/v1
+      REACT_APP_RPC_URL: http://localhost:8545
+      REACT_APP_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-7777}
+      REACT_APP_FAUCET_ADDRESS: ${FAUCET_ADDRESS}
+      REACT_APP_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
+      FAUCET_PRIVATE_KEY: ${FAUCET_PRIVATE_KEY}
+      FAUCET_AMOUNT: ${FAUCET_AMOUNT:-10000000000000000000}
+      FAUCET_COOLDOWN: ${FAUCET_COOLDOWN:-86400}
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+    ports:
+      - '3002:3000'
+    networks:
+      - ct-network
+    depends_on:
+      - api
+      - redis
+
+  # Validator Dashboard
+  dashboard:
+    build:
+      context: ./packages/dashboard
+      dockerfile: Dockerfile
+    container_name: ct-dashboard
+    environment:
+      REACT_APP_API_URL: http://localhost:8080/api/v1
+      REACT_APP_RPC_URL: http://localhost:8545
+      REACT_APP_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:-7777}
+    ports:
+      - '3003:3000'
+    networks:
+      - ct-network
+    depends_on:
+      - api
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ct-nginx
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - ct-network
+    depends_on:
+      - api
+      - explorer
+      - faucet
+      - dashboard
+
+networks:
+  ct-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
